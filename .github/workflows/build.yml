@@ -1,7 +1,7 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:  # Acionamento manual
+  workflow_dispatch:
 
 jobs:
   build:
@@ -34,7 +34,6 @@ jobs:
       - name: Configurar Android SDK (moderno)
         uses: android-actions/setup-android@v3
         with:
-          # Instala as ferramentas e plataformas necessárias
           cmdline-tools-version: 'latest'
           build-tools-version: '34.0.0'
           platforms: 'android-34'
@@ -43,9 +42,7 @@ jobs:
         run: |
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/aidl || echo "AIDL não encontrado"
-          # Garante que o sdkmanager moderno está no PATH
           which sdkmanager || echo "sdkmanager não está no PATH"
-          # Se não estiver, adiciona manualmente
           if ! which sdkmanager; then
             echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
           fi
@@ -63,9 +60,7 @@ jobs:
 
       - name: Compilar APK com Buildozer
         env:
-          # Força o uso do SDK e NDK baixados pelo Buildozer (não interfere)
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-          # Permite que o Buildozer baixe seu próprio NDK (recomendado)
         run: |
           buildozer -v android debug
 
