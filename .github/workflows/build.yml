@@ -1,3 +1,11 @@
 name: Teste
-"on": {workflow_dispatch: {}}
-jobs: {teste: {runs-on: ubuntu-22.04, steps: [{name: Verificar, run: 'echo YAML funcionando'}]}}
+
+on:
+workflow_dispatch:
+
+jobs:
+teste:
+runs-on: ubuntu-22.04
+steps:
+- name: Verificar
+run: echo "YAML funcionando"
