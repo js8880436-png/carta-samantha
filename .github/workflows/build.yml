@@ -48,7 +48,7 @@ jobs:
           rm ndk.zip
           echo "NDK installed at $HOME/android-ndk-r28c"
 
-      - name: Criar links simbólicos para SDK e NDK no local do Buildozer
+      - name: Criar link simbólico para SDK e NDK, e corrigir estrutura do SDK
         run: |
           # Cria o diretório onde o Buildozer espera o SDK
           mkdir -p /home/runner/.buildozer/android/platform
@@ -59,14 +59,28 @@ jobs:
           # Cria link simbólico para o NDK
           rm -rf /home/runner/.buildozer/android/platform/android-ndk-r28c
           ln -s /home/runner/android-ndk-r28c /home/runner/.buildozer/android/platform/android-ndk-r28c
-          # Verifica se o AIDL está acessível via link
-          if [ -f /home/runner/.buildozer/android/platform/android-sdk/build-tools/34.0.0/aidl ]; then
+          
+          # === CORREÇÃO CRUCIAL ===
+          # O Buildozer procura por tools/bin/sdkmanager dentro do SDK.
+          # Vamos criar essa estrutura e apontar para o sdkmanager moderno.
+          SDK_LINK="/home/runner/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK_LINK/tools/bin"
+          # Cria um link simbólico para o sdkmanager moderno dentro de tools/bin
+          ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "$SDK_LINK/tools/bin/sdkmanager"
+          
+          # Verifica se o AIDL está acessível
+          if [ -f "$SDK_LINK/build-tools/34.0.0/aidl" ]; then
             echo "AIDL encontrado via link simbólico!"
           else
             echo "ERRO: AIDL não encontrado. Listando build-tools:"
-            ls -la /home/runner/.buildozer/android/platform/android-sdk/build-tools/
+            ls -la "$SDK_LINK/build-tools/"
             exit 1
           fi
+
+      - name: Instalar platform-tools manualmente (usando o sdkmanager moderno)
+        run: |
+          # Instala as platform-tools para que o Buildozer não tente atualizá-las
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platform-tools"
 
       - name: Instalar Cython e Buildozer
         run: |
@@ -97,7 +111,6 @@ jobs:
           ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
           ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
         run: |
-          # Garantia extra: adiciona o caminho do sdkmanager moderno ao PATH, mas não deve ser usado devido a allow_sdk_update=False
           buildozer -v android debug
 
       - name: Fazer upload do APK
