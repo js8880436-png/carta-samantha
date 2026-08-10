@@ -9,68 +9,54 @@ branches:
 jobs:
 build:
 runs-on: ubuntu-22.04
-
 steps:
+- name: Baixar projeto
+uses: actions/checkout@v4
 
-  - name: Baixar projeto
-    uses: actions/checkout@v4
-
-  - name: Configurar Python 3.11
+  - name: Configurar Python
     uses: actions/setup-python@v5
     with:
       python-version: "3.11"
 
-  - name: Configurar Java 17
+  - name: Configurar Java
     uses: actions/setup-java@v4
     with:
       distribution: temurin
       java-version: "17"
 
-  - name: Configurar Android SDK
+  - name: Configurar Android
     uses: android-actions/setup-android@v3
 
-  - name: Preparar Android SDK
+  - name: Preparar SDK
     shell: bash
     run: |
       set -e
-
       export JAVA_HOME="${JAVA_HOME_17_X64}"
       export PATH="$JAVA_HOME/bin:$PATH"
+      export ANDROID_HOME="/usr/local/lib/android/sdk"
+      export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
 
-      echo "JAVA:"
-      java -version
-
-      echo "ANDROID_HOME=$ANDROID_HOME"
-
-      # Remover ferramentas Android antigas que fazem o Buildozer
-      # chamar o sdkmanager incompatível com Java 17.
       sudo rm -rf "$ANDROID_HOME/tools"
 
-      # Garantir que o sdkmanager moderno seja o primeiro encontrado.
       export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/16.0/bin:$ANDROID_HOME/platform-tools:$PATH"
 
-      echo "SDKMANAGER:"
+      echo "Java:"
+      java -version
+
+      echo "SDK Manager:"
       which sdkmanager
       sdkmanager --version
 
-      echo "Instalando componentes Android..."
+      yes | sdkmanager --licenses || true
 
-      yes | sdkmanager --licenses >/dev/null || true
+      sdkmanager "platform-tools"
+      sdkmanager "platforms;android-34"
+      sdkmanager "build-tools;34.0.0"
 
-      sdkmanager \
-        "platform-tools" \
-        "platforms;android-34" \
-        "build-tools;34.0.0"
-
-      echo "Verificando AIDL..."
-
-      test -f "$ANDROID_HOME/build-tools/34.0.0/aidl"
-
+      echo "AIDL:"
       "$ANDROID_HOME/build-tools/34.0.0/aidl" --version
 
-      echo "AIDL OK"
-
-  - name: Instalar dependências Python
+  - name: Instalar Buildozer
     shell: bash
     run: |
       python -m pip install --upgrade pip setuptools wheel
@@ -82,64 +68,29 @@ steps:
     run: |
       cat > buildozer.spec <<'EOF'
       [app]
-
       title = Carta Samantha
       package.name = cartasamantha
       package.domain = org.samantha
-
       source.dir = .
       source.include_exts = py,png,jpg,jpeg,webp,kv,atlas,txt,json
-
       version = 1.0
-
       requirements = python3,kivy
-
       orientation = portrait
       fullscreen = 0
-
       android.api = 34
       android.minapi = 21
-
       android.permissions = READ_MEDIA_IMAGES,READ_MEDIA_VIDEO
 
       [buildozer]
-
       log_level = 2
       warn_on_root = 1
       EOF
 
-  - name: Limpar builds anteriores
+  - name: Limpar Buildozer
     shell: bash
     run: |
       rm -rf .buildozer
       rm -rf bin
-
-  - name: Preparar ambiente do Buildozer
-    shell: bash
-    run: |
-      set -e
-
-      export JAVA_HOME="${JAVA_HOME_17_X64}"
-      export PATH="$JAVA_HOME/bin:$PATH"
-
-      export ANDROID_HOME="/usr/local/lib/android/sdk"
-      export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
-
-      # Muito importante:
-      # impedir que o Buildozer encontre o sdkmanager antigo.
-      sudo rm -rf "$ANDROID_HOME/tools"
-
-      export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/16.0/bin:$ANDROID_HOME/platform-tools:$PATH"
-
-      echo "JAVA:"
-      java -version
-
-      echo "SDKMANAGER:"
-      which sdkmanager
-      sdkmanager --version
-
-      echo "AIDL:"
-      "$ANDROID_HOME/build-tools/34.0.0/aidl" --version
 
   - name: Gerar APK
     shell: bash
@@ -149,19 +100,13 @@ steps:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     run: |
       set -o pipefail
-
       export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/cmdline-tools/16.0/bin:$ANDROID_HOME/platform-tools:$PATH"
-
       buildozer -v android debug 2>&1 | tee build.log
 
-  - name: Mostrar log se falhar
+  - name: Mostrar erro
     if: failure()
     shell: bash
     run: |
-      echo "=============================="
-      echo "LOG DO BUILD"
-      echo "=============================="
-
       if [ -f build.log ]; then
         tail -n 250 build.log
       fi
@@ -170,10 +115,6 @@ steps:
     if: success()
     shell: bash
     run: |
-      echo "=============================="
-      echo "APK GERADO"
-      echo "=============================="
-
       ls -lh bin/
 
   - name: Enviar APK
