@@ -38,16 +38,24 @@ jobs:
           build-tools-version: '34.0.0'
           platforms: 'android-34'
 
-      - name: Verificar SDK e AIDL
+      - name: Criar link simbólico para o SDK no local esperado pelo Buildozer
         run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/34.0.0"
-          if [ -f "$BUILD_TOOLS/aidl" ]; then
-            echo "AIDL encontrado em $BUILD_TOOLS/aidl"
+          # O SDK real está em /usr/local/lib/android/sdk
+          REAL_SDK="/usr/local/lib/android/sdk"
+          # O local onde o Buildozer procura
+          BUILD_OZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
+          # Cria o diretório pai, se não existir
+          mkdir -p "$(dirname "$BUILD_OZER_SDK")"
+          # Remove qualquer link ou diretório existente (se houver)
+          rm -rf "$BUILD_OZER_SDK"
+          # Cria o link simbólico
+          ln -s "$REAL_SDK" "$BUILD_OZER_SDK"
+          # Verifica se o AIDL está acessível pelo link
+          if [ -f "$BUILD_OZER_SDK/build-tools/34.0.0/aidl" ]; then
+            echo "AIDL encontrado via link simbólico!"
           else
-            echo "ERRO: AIDL não encontrado"
-            ls -la "$ANDROID_SDK_ROOT/build-tools/"
+            echo "ERRO: AIDL não encontrado. Listando conteúdo do SDK:"
+            ls -la "$BUILD_OZER_SDK/build-tools/"
             exit 1
           fi
 
@@ -57,19 +65,15 @@ jobs:
           pip install cython
           pip install buildozer==1.5.0
 
-      - name: Criar/ajustar buildozer.spec com SDK correto
+      - name: Criar/ajustar buildozer.spec
         run: |
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
-          # Substitui ou adiciona a linha android.sdk_path
-          if grep -q "^android.sdk_path" buildozer.spec; then
-            sed -i 's|^android.sdk_path.*|android.sdk_path = /usr/local/lib/android/sdk|' buildozer.spec
-          else
-            echo "android.sdk_path = /usr/local/lib/android/sdk" >> buildozer.spec
-          fi
-          # Verifica se ficou configurado
-          grep android.sdk_path buildozer.spec
+          # Garante que o android.sdk_path esteja vazio para forçar o Buildozer a usar o padrão (que agora aponta para o real via link)
+          sed -i 's/^android.sdk_path.*/android.sdk_path = /' buildozer.spec || echo "android.sdk_path = " >> buildozer.spec
+          # Também define ANDROID_HOME e ANDROID_SDK_ROOT para garantir
+          grep -q "android.sdk_path" buildozer.spec || echo "android.sdk_path = " >> buildozer.spec
 
       - name: Compilar APK
         env:
