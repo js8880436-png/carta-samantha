@@ -38,26 +38,33 @@ jobs:
           build-tools-version: '34.0.0'
           platforms: 'android-34'
 
-      - name: Criar link simbólico para o SDK no local do Buildozer
+      - name: Baixar e instalar NDK r28c manualmente
         run: |
-          REAL_SDK="/usr/local/lib/android/sdk"
-          BUILD_OZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
-          # Remove qualquer diretório/link existente
-          rm -rf "$BUILD_OZER_SDK"
-          mkdir -p "$(dirname "$BUILD_OZER_SDK")"
-          ln -s "$REAL_SDK" "$BUILD_OZER_SDK"
-          # Verifica se o AIDL está acessível
-          if [ -f "$BUILD_OZER_SDK/build-tools/34.0.0/aidl" ]; then
-            echo "AIDL encontrado via link simbólico!"
+          NDK_VERSION="r28c"
+          NDK_URL="https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip"
+          NDK_DIR="$HOME/android-ndk-${NDK_VERSION}"
+          mkdir -p "$NDK_DIR"
+          curl -L "$NDK_URL" -o ndk.zip
+          unzip -q ndk.zip -d "$HOME"
+          rm ndk.zip
+          # O diretório extraído é android-ndk-r28c
+          echo "NDK installed at $HOME/android-ndk-r28c"
+          echo "NDK_PATH=$HOME/android-ndk-r28c" >> $GITHUB_ENV
+
+      - name: Verificar SDK e AIDL
+        run: |
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/34.0.0"
+          if [ -f "$BUILD_TOOLS/aidl" ]; then
+            echo "AIDL encontrado em $BUILD_TOOLS/aidl"
           else
-            echo "ERRO: AIDL não encontrado. Listando build-tools:"
-            ls -la "$BUILD_OZER_SDK/build-tools/"
+            echo "ERRO: AIDL não encontrado"
+            ls -la "$ANDROID_SDK_ROOT/build-tools/"
             exit 1
           fi
-          # Adiciona os caminhos ao PATH para garantir que o sdkmanager moderno seja usado
-          echo "$REAL_SDK/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$REAL_SDK/platform-tools" >> $GITHUB_PATH
-          echo "$REAL_SDK/build-tools/34.0.0" >> $GITHUB_PATH
+          # Adiciona cmdline-tools ao PATH para o Buildozer encontrar o sdkmanager moderno
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Instalar Cython e Buildozer
         run: |
@@ -65,26 +72,31 @@ jobs:
           pip install cython
           pip install buildozer==1.5.0
 
-      - name: Criar/ajustar buildozer.spec
+      - name: Criar/ajustar buildozer.spec com SDK e NDK fixos
         run: |
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
-          # Remove qualquer definição antiga e força o caminho do SDK
+          # Remove definições antigas
           sed -i '/^android.sdk_path/d' buildozer.spec
-          echo "android.sdk_path = /usr/local/lib/android/sdk" >> buildozer.spec
-          # Deixa o NDK vazio para o Buildozer baixar (funciona)
           sed -i '/^android.ndk_path/d' buildozer.spec
-          echo "android.ndk_path = " >> buildozer.spec
-          # Verifica
-          grep -E "(android.sdk_path|android.ndk_path)" buildozer.spec
+          sed -i '/^android.allow_sdk_update/d' buildozer.spec
+          sed -i '/^android.allow_ndk_update/d' buildozer.spec
+          # Adiciona as configurações corretas
+          echo "android.sdk_path = /usr/local/lib/android/sdk" >> buildozer.spec
+          echo "android.ndk_path = $HOME/android-ndk-r28c" >> buildozer.spec
+          echo "android.allow_sdk_update = False" >> buildozer.spec
+          echo "android.allow_ndk_update = False" >> buildozer.spec
+          # Exibe para verificação
+          grep -E "(android.sdk_path|android.ndk_path|android.allow)" buildozer.spec
 
       - name: Compilar APK
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           ANDROID_HOME: /usr/local/lib/android/sdk
+          NDK_PATH: ${{ env.NDK_PATH }}
         run: |
-          # Garantia extra: força o uso do sdkmanager moderno
+          # Garantia extra: coloca o sdkmanager moderno no PATH
           export PATH=/usr/local/lib/android/sdk/cmdline-tools/latest/bin:$PATH
           buildozer -v android debug
 
