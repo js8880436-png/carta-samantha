@@ -60,46 +60,46 @@ jobs:
           ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
                  /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
 
-      - name: Cache do Gradle
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Cache do Buildozer
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
-
       - name: Instalar Cython e Buildozer
         run: |
           pip install --upgrade pip setuptools
           pip install cython
           pip install buildozer==1.5.0
 
-      - name: Configurar buildozer.spec
+      - name: Criar buildozer.spec do zero (com todas as configurações)
         run: |
-          if [ ! -f buildozer.spec ]; then
-            buildozer init
-          fi
-          sed -i '/^android.sdk_path/d' buildozer.spec
-          sed -i '/^android.ndk_path/d' buildozer.spec
-          sed -i '/^android.allow_sdk_update/d' buildozer.spec
-          sed -i '/^android.allow_ndk_update/d' buildozer.spec
-          sed -i '/^requirements/d' buildozer.spec
-          echo "requirements = python3,kivy,android" >> buildozer.spec
-          echo "android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk" >> buildozer.spec
-          echo "android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r28c" >> buildozer.spec
-          echo "android.allow_sdk_update = False" >> buildozer.spec
-          echo "android.allow_ndk_update = False" >> buildozer.spec
-          echo "android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE" >> buildozer.spec
-          echo "android.api = 30" >> buildozer.spec
-          echo "android.target_sdk = 34" >> buildozer.spec
+          cat > buildozer.spec << 'EOF'
+          [app]
+          title = Carta Samantha
+          package.name = cartasamantha
+          package.domain = org.js8880436
+          version = 1.0.0
+
+          # DEPENDÊNCIAS (CRUCIAL!)
+          requirements = python3,kivy,android
+
+          source.dir = .
+          source.include_exts = py,png,jpg,kv,atlas,ttf
+
+          # Permissões Android
+          android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+          android.api = 30
+          android.target_sdk = 34
+          android.allow_backup = True
+
+          # SDK e NDK (usando os links criados)
+          android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk
+          android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r28c
+          android.allow_sdk_update = False
+          android.allow_ndk_update = False
+
+          [buildozer]
+          log_level = 2
+          warn_on_root = 1
+          EOF
+
+          echo "=== buildozer.spec criado ==="
+          cat buildozer.spec
 
       - name: Compilar APK
         env:
