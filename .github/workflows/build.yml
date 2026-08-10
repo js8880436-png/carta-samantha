@@ -38,14 +38,22 @@ jobs:
           build-tools-version: '34.0.0'
           platforms: 'android-34'
 
-      - name: Verificar SDK e AIDL
+      - name: Adicionar build-tools ao PATH e verificar AIDL
         run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          if ! which sdkmanager; then
-            echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          # Define o caminho das build-tools
+          BUILD_TOOLS_DIR="$ANDROID_SDK_ROOT/build-tools/34.0.0"
+          echo "Build tools directory: $BUILD_TOOLS_DIR"
+          # Adiciona ao PATH
+          echo "$BUILD_TOOLS_DIR" >> $GITHUB_PATH
+          # Verifica se o AIDL existe
+          if [ -f "$BUILD_TOOLS_DIR/aidl" ]; then
+            echo "AIDL encontrado em $BUILD_TOOLS_DIR/aidl"
+          else
+            echo "ERRO: AIDL não encontrado. Listando build-tools:"
+            ls -la "$ANDROID_SDK_ROOT/build-tools/"
+            exit 1
           fi
 
-      # ⬇️ PASSO CRUCIAL: instalar Cython e outras dependências Python
       - name: Instalar dependências Python (Cython, Buildozer)
         run: |
           pip install --upgrade pip setuptools
@@ -61,6 +69,7 @@ jobs:
       - name: Compilar APK
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}  # Força o ANDROID_HOME
         run: |
           buildozer -v android debug
 
