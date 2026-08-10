@@ -1,1 +1,1 @@
-import osCartaEspecialApp().run()
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
