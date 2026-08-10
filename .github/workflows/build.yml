@@ -31,56 +31,50 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Android SDK (moderno)
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 'latest'
           build-tools-version: '34.0.0'
           platforms: 'android-34'
 
-      - name: Baixar e instalar NDK r28c manualmente
+      - name: Aceitar licenças do SDK
         run: |
-          NDK_VERSION="r28c"
-          NDK_URL="https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip"
-          mkdir -p "$HOME/android-ndk-${NDK_VERSION}"
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+
+      - name: Baixar NDK r28c
+        run: |
+          NDK_URL="https://dl.google.com/android/repository/android-ndk-r28c-linux.zip"
           curl -L "$NDK_URL" -o ndk.zip
           unzip -q ndk.zip -d "$HOME"
           rm ndk.zip
-          echo "NDK installed at $HOME/android-ndk-r28c"
 
-      - name: Criar link simbólico para SDK e NDK, e corrigir estrutura do SDK
+      - name: Criar links simbólicos
         run: |
-          # Cria o diretório onde o Buildozer espera o SDK
           mkdir -p /home/runner/.buildozer/android/platform
-          # Remove qualquer SDK existente (diretório ou link)
           rm -rf /home/runner/.buildozer/android/platform/android-sdk
-          # Cria link simbólico para o SDK moderno
           ln -s /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
-          # Cria link simbólico para o NDK
           rm -rf /home/runner/.buildozer/android/platform/android-ndk-r28c
           ln -s /home/runner/android-ndk-r28c /home/runner/.buildozer/android/platform/android-ndk-r28c
-          
-          # === CORREÇÃO CRUCIAL ===
-          # O Buildozer procura por tools/bin/sdkmanager dentro do SDK.
-          # Vamos criar essa estrutura e apontar para o sdkmanager moderno.
-          SDK_LINK="/home/runner/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_LINK/tools/bin"
-          # Cria um link simbólico para o sdkmanager moderno dentro de tools/bin
-          ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "$SDK_LINK/tools/bin/sdkmanager"
-          
-          # Verifica se o AIDL está acessível
-          if [ -f "$SDK_LINK/build-tools/34.0.0/aidl" ]; then
-            echo "AIDL encontrado via link simbólico!"
-          else
-            echo "ERRO: AIDL não encontrado. Listando build-tools:"
-            ls -la "$SDK_LINK/build-tools/"
-            exit 1
-          fi
+          mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
+          ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+                 /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
 
-      - name: Instalar platform-tools manualmente (usando o sdkmanager moderno)
-        run: |
-          # Instala as platform-tools para que o Buildozer não tente atualizá-las
-          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platform-tools"
+      - name: Cache do Gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache do Buildozer
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
 
       - name: Instalar Cython e Buildozer
         run: |
@@ -88,23 +82,24 @@ jobs:
           pip install cython
           pip install buildozer==1.5.0
 
-      - name: Criar/ajustar buildozer.spec com SDK e NDK fixos
+      - name: Configurar buildozer.spec
         run: |
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
-          # Remove definições antigas
           sed -i '/^android.sdk_path/d' buildozer.spec
           sed -i '/^android.ndk_path/d' buildozer.spec
           sed -i '/^android.allow_sdk_update/d' buildozer.spec
           sed -i '/^android.allow_ndk_update/d' buildozer.spec
-          # Adiciona as configurações forçando o uso dos links
+          sed -i '/^requirements/d' buildozer.spec
+          echo "requirements = python3,kivy,android" >> buildozer.spec
           echo "android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk" >> buildozer.spec
           echo "android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r28c" >> buildozer.spec
           echo "android.allow_sdk_update = False" >> buildozer.spec
           echo "android.allow_ndk_update = False" >> buildozer.spec
-          # Exibe para verificação
-          grep -E "(android.sdk_path|android.ndk_path|android.allow)" buildozer.spec
+          echo "android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE" >> buildozer.spec
+          echo "android.api = 30" >> buildozer.spec
+          echo "android.target_sdk = 34" >> buildozer.spec
 
       - name: Compilar APK
         env:
