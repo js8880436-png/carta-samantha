@@ -1,0 +1,1 @@
+import osCartaEspecialApp().run()
