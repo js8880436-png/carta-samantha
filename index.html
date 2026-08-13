@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#6e1a1f">
+<title>Escrito Para Samantha</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="home" class="screen active"><div class="paper">
+<div class="big-icon">✉</div><h1>Escrito Para Samantha</h1>
+<div class="mode">CARTA DIGITAL</div>
+<p>Crie uma carta e gere um código para outra pessoa abrir em outro celular.</p>
+<button class="primary" onclick="show('creator')">✎ CRIAR CARTA</button>
+<button class="secondary" onclick="show('receiver')">♥ RECEBI UM CÓDIGO</button>
+</div></section>
+
+<section id="creator" class="screen"><div class="paper">
+<h1>Escreva sua carta</h1>
+<textarea id="message" placeholder="Escreva aqui tudo o que gostaria de dizer..."></textarea>
+<div class="label">Tamanho da letra</div>
+<div class="sizes">
+<button onclick="font(18)">A</button><button onclick="font(22)">A</button>
+<button onclick="font(26)">A</button><button onclick="font(31)">A</button>
+</div>
+<label class="upload">📷 ADICIONAR FOTOS
+<input id="photos" type="file" accept="image/*" multiple hidden>
+</label>
+<div id="preview" class="grid"></div>
+<button class="seal" onclick="createLetter()">♥ SELAR E GERAR CÓDIGO</button>
+<button class="secondary" onclick="show('home')">← VOLTAR</button>
+<div id="createStatus" class="status"></div>
+</div></section>
+
+<section id="created" class="screen"><div class="paper centered">
+<div class="big-icon">✉</div><h1>Carta criada</h1>
+<p>Envie este código para a pessoa que deverá abrir a carta.</p>
+<div id="code" class="code"></div>
+<button class="primary" onclick="copyCode()">COPIAR CÓDIGO</button>
+<button class="secondary" onclick="show('receiver')">ABRIR COMO DESTINATÁRIO</button>
+</div></section>
+
+<section id="receiver" class="screen"><div class="paper centered">
+<div class="big-icon">♥</div><h1>Você recebeu uma carta</h1>
+<p>Digite o código recebido.</p>
+<input id="codeInput" class="codeInput" maxlength="6" placeholder="ABC123">
+<button class="primary" onclick="openLetter()">ABRIR CARTA</button>
+<button class="secondary" onclick="show('home')">← VOLTAR</button>
+<div id="receiveStatus" class="status"></div>
+</div></section>
+
+<section id="letter" class="screen"><div class="paper">
+<div class="big-icon">♥</div><h1>Uma carta para você</h1>
+<div id="finalMessage" class="finalMessage"></div>
+<div id="finalMedia" class="grid"></div>
+<button class="secondary" onclick="show('home')">← INÍCIO</button>
+</div></section>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

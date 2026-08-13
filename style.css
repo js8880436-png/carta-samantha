@@ -1,0 +1,27 @@
+*{box-sizing:border-box}
+body{margin:0;background:#351c19;color:#452914;font-family:Georgia,serif}
+.screen{display:none;min-height:100vh;padding:14px;align-items:center;justify-content:center}
+.screen.active{display:flex}
+.paper{width:min(720px,100%);min-height:calc(100vh - 28px);padding:22px 18px;background:linear-gradient(145deg,#e5cfaa,#d8bb90);border-radius:20px;box-shadow:0 15px 45px #0007;display:flex;flex-direction:column;gap:13px}
+.centered{text-align:center;justify-content:center}
+h1{text-align:center;font-size:clamp(29px,7vw,43px);margin:0}
+.big-icon{text-align:center;color:#6e1a1f;font-size:75px}
+p{text-align:center;line-height:1.5;color:#6b4726}
+.mode{text-align:center;color:#6e1a1f;font-weight:bold;letter-spacing:2px}
+.primary,.secondary,.seal,.upload{width:100%;padding:15px;border-radius:16px;font:bold 18px Georgia;border:0;cursor:pointer}
+.primary,.seal{background:#6e1a1f;color:#fff8e5}
+.secondary{background:transparent;color:#6e1a1f;border:2px solid #6e1a1f}
+.upload{background:#8d6a42;color:#fff8e5;text-align:center}
+textarea{width:100%;min-height:35vh;padding:18px;border-radius:16px;border:1px solid #c5a878;background:#efdcb5;color:#452914;font:24px Georgia;resize:vertical}
+.label{text-align:center;font-weight:bold}
+.sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sizes button{height:55px;border:0;border-radius:14px;background:#6e1a1f;color:#fff8e5;font-family:Georgia;cursor:pointer}
+.sizes button:nth-child(1){font-size:18px}.sizes button:nth-child(2){font-size:22px}
+.sizes button:nth-child(3){font-size:26px}.sizes button:nth-child(4){font-size:31px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid img{width:100%;height:180px;object-fit:cover;border-radius:14px}
+.code{padding:20px;border:2px dashed #6e1a1f;border-radius:16px;background:#efdcb5;color:#6e1a1f;font:bold 38px monospace;letter-spacing:5px}
+.codeInput{width:100%;padding:18px;border-radius:16px;border:1px solid #c5a878;background:#efdcb5;text-align:center;font:bold 28px monospace;text-transform:uppercase}
+.finalMessage{white-space:pre-wrap;background:#efdcb5;border-radius:16px;padding:22px;font-size:24px;line-height:1.7;min-height:220px}
+.status{text-align:center;min-height:24px;color:#6e1a1f;font-weight:bold}
+@media(max-width:480px){.paper{padding:18px 13px}.grid img{height:145px}}
