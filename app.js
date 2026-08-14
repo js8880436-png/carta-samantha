@@ -78,7 +78,7 @@ async function createLetter() {
     show("created");
   } catch (e) {
     console.error(e);
-    st.textContent = "Erro: " + e.message;  // ← ALTERAÇÃO AQUI
+    st.textContent = "Erro: " + e.message;
   }
 }
 
@@ -105,7 +105,7 @@ async function openLetter() {
     show("letter");
   } catch (e) {
     console.error(e);
-    st.textContent = "Erro ao buscar a carta.";
+    st.textContent = "Erro ao buscar a carta: " + e.message; // ← CORRIGIDO AQUI
   }
 }
 
