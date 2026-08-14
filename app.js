@@ -33,8 +33,18 @@ async function api(path, opt = {}) {
       ...(opt.headers || {})
     }
   });
-  if (!r.ok) throw Error(await r.text());
-  return r.status === 204 ? null : r.json();
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(text || "Erro HTTP " + r.status);
+  }
+  if (r.status === 204) return null;
+  const text = await r.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    // Se não for JSON, retorna como string (para depuração)
+    return text;
+  }
 }
 
 $("photos").onchange = async e => {
@@ -66,13 +76,15 @@ async function createLetter() {
   try {
     let c = code(),
       q = await api("letters?select=id&code=eq." + c);
-    while (q.length) {
+    while (Array.isArray(q) && q.length) {
       c = code();
       q = await api("letters?select=id&code=eq." + c);
     }
+    const body = JSON.stringify({ code: c, message: msg, media });
+    console.log("Enviando:", body); // ← log para depuração
     await api("letters", {
       method: "POST",
-      body: JSON.stringify({ code: c, message: msg, media })
+      body: body
     });
     $("code").textContent = c;
     show("created");
@@ -96,16 +108,18 @@ async function openLetter() {
   }
   try {
     const rows = await api("letters?select=message,media&code=eq." + encodeURIComponent(c) + "&limit=1");
-    if (!rows.length) {
+    if (!rows || (Array.isArray(rows) && rows.length === 0)) {
       st.textContent = "Carta não encontrada.";
       return;
     }
-    $("finalMessage").textContent = rows[0].message;
-    $("finalMedia").innerHTML = (rows[0].media || []).map(x => "<img src='" + x + "'>").join("");
+    const first = Array.isArray(rows) ? rows[0] : rows;
+    $("finalMessage").textContent = first.message;
+    const medias = first.media || [];
+    $("finalMedia").innerHTML = medias.map(x => "<img src='" + x + "'>").join("");
     show("letter");
   } catch (e) {
     console.error(e);
-    st.textContent = "Erro ao buscar a carta: " + e.message; // ← CORRIGIDO AQUI
+    st.textContent = "Erro ao buscar a carta: " + e.message;
   }
 }
 
