@@ -24,7 +24,9 @@ function code() {
 }
 
 async function api(path, opt = {}) {
-  const r = await fetch(URL + "/rest/v1/" + path, {
+  const url = URL + "/rest/v1/" + path;
+  console.log("🔗 Requisição para:", url);
+  const r = await fetch(url, {
     ...opt,
     headers: {
       apikey: KEY,
@@ -33,16 +35,22 @@ async function api(path, opt = {}) {
       ...(opt.headers || {})
     }
   });
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(text || "Erro HTTP " + r.status);
-  }
-  if (r.status === 204) return null;
+
   const text = await r.text();
+  console.log("📡 Status:", r.status);
+  console.log("📄 Resposta (texto):", text);
+
+  if (!r.ok) {
+    throw new Error("HTTP " + r.status + ": " + text);
+  }
+
+  if (r.status === 204) return null;
+  if (!text) return null;
+
   try {
     return JSON.parse(text);
   } catch (e) {
-    // Se não for JSON, retorna como string (para depuração)
+    console.warn("⚠️ Resposta não é JSON:", text);
     return text;
   }
 }
@@ -81,7 +89,7 @@ async function createLetter() {
       q = await api("letters?select=id&code=eq." + c);
     }
     const body = JSON.stringify({ code: c, message: msg, media });
-    console.log("Enviando:", body); // ← log para depuração
+    console.log("📤 Enviando:", body);
     await api("letters", {
       method: "POST",
       body: body
@@ -89,7 +97,7 @@ async function createLetter() {
     $("code").textContent = c;
     show("created");
   } catch (e) {
-    console.error(e);
+    console.error("❌ Erro:", e);
     st.textContent = "Erro: " + e.message;
   }
 }
